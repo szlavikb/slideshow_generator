@@ -9,6 +9,10 @@ from PIL import Image, ExifTags
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp", ".heic"}
 
+# Default root folder for year subfolders (e.g. photos/2018, photos/2019, ...)
+# when the caller doesn't specify one. Created on demand if missing.
+DEFAULT_PHOTOS_DIR = Path(__file__).resolve().parent.parent / "photos"
+
 _EXIF_DATE_TAG = next(
     (tag for tag, name in ExifTags.TAGS.items() if name == "DateTimeOriginal"), None
 )

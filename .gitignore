@@ -3,6 +3,8 @@ __pycache__/
 .venv/
 *.mp4
 /uploads/
+/photos/*
+!/photos/.gitkeep
 *.egg-info/
 build/
 dist/

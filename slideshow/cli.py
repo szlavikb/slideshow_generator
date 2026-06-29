@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 
 from .render import DEFAULT_RESOLUTION, build_slideshow
-from .scanner import scan_photos
+from .scanner import DEFAULT_PHOTOS_DIR, scan_photos
 
 
 def parse_resolution(value: str) -> tuple[int, int]:
@@ -20,7 +20,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Create a chronological MP4 slideshow from a folder of year-named photo subfolders.",
     )
-    parser.add_argument("input_folder", type=Path, help="Root folder containing year subfolders (e.g. 2018, 2019, ...)")
+    parser.add_argument(
+        "input_folder",
+        type=Path,
+        nargs="?",
+        default=DEFAULT_PHOTOS_DIR,
+        help=f"Root folder containing year subfolders (e.g. 2018, 2019, ...). Default: {DEFAULT_PHOTOS_DIR}",
+    )
     parser.add_argument("output_file", type=Path, help="Output .mp4 path")
     parser.add_argument(
         "--seconds-per-image", type=float, default=3.0, help="How long each photo is shown, in seconds (default: 3.0)"
@@ -67,6 +73,10 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     if not args.input_folder.is_dir():
+        if args.input_folder == DEFAULT_PHOTOS_DIR:
+            args.input_folder.mkdir(parents=True, exist_ok=True)
+            print(f"Created default photos folder at {args.input_folder}. Add year subfolders (2018, 2019, ...) with photos and rerun.")
+            return 1
         print(f"Input folder not found: {args.input_folder}")
         return 1
     if args.soundtrack:

@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from .render import DEFAULT_RESOLUTION, build_slideshow
-from .scanner import scan_photos
+from .scanner import DEFAULT_PHOTOS_DIR, scan_photos
 
 app = FastAPI(
     title="Photo Slideshow API",
@@ -27,6 +27,15 @@ app = FastAPI(
 
 UPLOAD_ROOT = Path(__file__).resolve().parent.parent / "uploads"
 _SOUNDTRACK_DIRNAME = "_soundtracks"
+
+
+def _upload_base_dir(upload_id: Optional[str]) -> tuple[str, Path]:
+    """Resolve where an upload should land: a fresh/named batch under
+    `uploads/`, or the shared default photos folder when no upload_id is
+    given at all."""
+    if upload_id is None:
+        return "default", DEFAULT_PHOTOS_DIR
+    return upload_id, UPLOAD_ROOT / upload_id
 
 
 class UploadResult(BaseModel):
@@ -59,13 +68,17 @@ def _save_uploads(dest_dir: Path, files: list[UploadFile]) -> list[str]:
 def upload_photos(
     year: int = Form(..., description="The year subfolder these photos belong to, e.g. 2018"),
     upload_id: Optional[str] = Form(
-        default=None, description="Reuse an existing upload_id to add another year to the same batch"
+        default=None,
+        description=(
+            "Reuse an existing upload_id to add another year to the same batch. "
+            "Leave empty to upload into the shared default photos folder."
+        ),
     ),
     files: list[UploadFile] = File(..., description="Photo files for this year"),
 ) -> UploadResult:
-    upload_id = upload_id or uuid.uuid4().hex
-    saved = _save_uploads(UPLOAD_ROOT / upload_id / str(year), files)
-    return UploadResult(upload_id=upload_id, saved_files=saved, input_folder=str(UPLOAD_ROOT / upload_id))
+    resolved_id, base_dir = _upload_base_dir(upload_id)
+    saved = _save_uploads(base_dir / str(year), files)
+    return UploadResult(upload_id=resolved_id, saved_files=saved, input_folder=str(base_dir))
 
 
 @app.post(
@@ -75,13 +88,17 @@ def upload_photos(
 )
 def upload_soundtracks(
     upload_id: Optional[str] = Form(
-        default=None, description="Reuse an existing upload_id to keep the soundtrack alongside its photos"
+        default=None,
+        description=(
+            "Reuse an existing upload_id to keep the soundtrack alongside its photos. "
+            "Leave empty to use the shared default photos folder."
+        ),
     ),
     files: list[UploadFile] = File(..., description="Audio files, in the order they should play"),
 ) -> UploadResult:
-    upload_id = upload_id or uuid.uuid4().hex
-    saved = _save_uploads(UPLOAD_ROOT / upload_id / _SOUNDTRACK_DIRNAME, files)
-    return UploadResult(upload_id=upload_id, saved_files=saved, soundtrack_paths=saved)
+    resolved_id, base_dir = _upload_base_dir(upload_id)
+    saved = _save_uploads(base_dir / _SOUNDTRACK_DIRNAME, files)
+    return UploadResult(upload_id=resolved_id, saved_files=saved, soundtrack_paths=saved)
 
 
 class JobStatus(str, Enum):
@@ -92,7 +109,13 @@ class JobStatus(str, Enum):
 
 
 class SlideshowRequest(BaseModel):
-    input_folder: str = Field(..., description="Root folder containing year subfolders (e.g. 2018, 2019, ...)")
+    input_folder: Optional[str] = Field(
+        default=None,
+        description=(
+            "Root folder containing year subfolders (e.g. 2018, 2019, ...). "
+            f"Defaults to the shared photos folder ({DEFAULT_PHOTOS_DIR}) if omitted."
+        ),
+    )
     output_file: str = Field(..., description="Destination path for the rendered .mp4")
     seconds_per_image: float = Field(default=3.0, description="How long each photo is shown, in seconds")
     transition_seconds: float = Field(default=0.5, description="Crossfade duration between photos, in seconds")
@@ -166,6 +189,7 @@ def _run_job(job_id: str, req: SlideshowRequest) -> None:
 
 @app.post("/slideshows", response_model=JobInfo, status_code=202, summary="Start generating a chronological slideshow")
 def create_slideshow(req: SlideshowRequest) -> JobInfo:
+    req.input_folder = req.input_folder or str(DEFAULT_PHOTOS_DIR)
     if not Path(req.input_folder).is_dir():
         raise HTTPException(status_code=400, detail=f"Input folder not found: {req.input_folder}")
     if req.soundtrack:
