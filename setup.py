@@ -7,6 +7,8 @@ setup(
     install_requires=[
         "moviepy>=1.0.3",
         "Pillow>=10.0.0",
+        "fastapi>=0.110.0",
+        "uvicorn[standard]>=0.29.0",
     ],
     entry_points={
         "console_scripts": [

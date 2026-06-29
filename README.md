@@ -37,6 +37,24 @@ The console first prints the calculated slideshow length (from photo count and `
 - `--zoom` — how far the Ken Burns effect zooms in, as a multiplier (default 1.15)
 - `--fps` — output frame rate (default 24)
 
+## REST API (Swagger)
+
+A FastAPI wrapper exposes the same functionality over HTTP, with interactive Swagger docs.
+
+```
+uvicorn slideshow.api:app --reload
+```
+
+Then open http://127.0.0.1:8000/docs for the Swagger UI, or http://127.0.0.1:8000/redoc for ReDoc.
+
+Rendering happens in a background thread per job, since a slideshow can take a while to encode:
+
+- `POST /slideshows` — body matches the CLI options (`input_folder`, `output_file`, `seconds_per_image`, `soundtrack`, etc.); returns `202` with a `job_id` immediately.
+- `GET /slideshows/{job_id}` — poll for `status` (`pending` / `running` / `done` / `error`), `photo_count`, and `calculated_length_seconds`.
+- `GET /slideshows/{job_id}/download` — streams the finished `.mp4` once `status` is `done`.
+
+All paths (`input_folder`, `output_file`, `soundtrack`) refer to locations on the machine running the API, not uploaded files.
+
 ## Expected folder layout
 
 ```
