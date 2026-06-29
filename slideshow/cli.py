@@ -31,9 +31,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--resolution", type=parse_resolution, default=DEFAULT_RESOLUTION, help="Output resolution as WIDTHxHEIGHT (default: 1920x1080)"
     )
-    parser.add_argument("--soundtrack", type=Path, default=None, help="Optional audio file to play under the slideshow")
+    parser.add_argument(
+        "--soundtrack",
+        type=Path,
+        nargs="+",
+        default=None,
+        help="One or more audio files to play under the slideshow, in order, looped/trimmed to fit",
+    )
     parser.add_argument(
         "--soundtrack-volume", type=float, default=1.0, help="Soundtrack volume multiplier (default: 1.0)"
+    )
+    parser.add_argument(
+        "--audio-fade-seconds",
+        type=float,
+        default=1.0,
+        help="Fade duration applied at every track join and at any cut point, to avoid clicks (default: 1.0)",
     )
     parser.add_argument("--fps", type=int, default=24, help="Output video frame rate (default: 24)")
     return parser
@@ -45,9 +57,11 @@ def main(argv: list[str] | None = None) -> int:
     if not args.input_folder.is_dir():
         print(f"Input folder not found: {args.input_folder}")
         return 1
-    if args.soundtrack is not None and not args.soundtrack.is_file():
-        print(f"Soundtrack file not found: {args.soundtrack}")
-        return 1
+    if args.soundtrack:
+        missing = [str(p) for p in args.soundtrack if not p.is_file()]
+        if missing:
+            print(f"Soundtrack file(s) not found: {', '.join(missing)}")
+            return 1
 
     photos = scan_photos(args.input_folder)
     if not photos:
@@ -66,8 +80,9 @@ def main(argv: list[str] | None = None) -> int:
         seconds_per_image=args.seconds_per_image,
         transition_seconds=args.transition_seconds,
         resolution=args.resolution,
-        soundtrack_path=args.soundtrack,
+        soundtrack_paths=args.soundtrack,
         soundtrack_volume=args.soundtrack_volume,
+        audio_fade_seconds=args.audio_fade_seconds,
         fps=args.fps,
     )
 

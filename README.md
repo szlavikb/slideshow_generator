@@ -20,16 +20,19 @@ You also need [ffmpeg](https://ffmpeg.org/download.html) on your PATH (moviepy s
 ## Usage
 
 ```
-python -m slideshow.cli "C:\Photos" "C:\Output\slideshow.mp4" --seconds-per-image 3 --soundtrack "C:\Music\song.mp3"
+python -m slideshow.cli "C:\Photos" "C:\Output\slideshow.mp4" --seconds-per-image 3 --soundtrack "C:\Music\song1.mp3" "C:\Music\song2.mp3"
 ```
+
+The console first prints the calculated slideshow length (from photo count and `--seconds-per-image`) so you know how long a soundtrack to pick.
 
 ### Options
 
 - `--seconds-per-image` — how long each photo is shown (default 3.0)
 - `--transition-seconds` — crossfade duration between photos (default 0.5)
 - `--resolution` — output resolution, e.g. `1920x1080` (default)
-- `--soundtrack` — optional audio file; looped or trimmed to match video length
+- `--soundtrack` — one or more audio files, played in order, looped or trimmed to match the video length exactly
 - `--soundtrack-volume` — volume multiplier for the soundtrack (default 1.0)
+- `--audio-fade-seconds` — fade applied at every track join and at any cut point, so looping/trimming/concatenating never clicks or jumps abruptly (default 1.0)
 - `--fps` — output frame rate (default 24)
 
 ## Expected folder layout
