@@ -7,9 +7,7 @@ Don't worry about organizing your photos first. Drop them into any folder struct
 ## Quick start
 
 ```
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+uv sync
 ```
 
 You'll also need [ffmpeg](https://ffmpeg.org/download.html) installed and on your PATH.
@@ -17,19 +15,19 @@ You'll also need [ffmpeg](https://ffmpeg.org/download.html) installed and on you
 Then generate a slideshow:
 
 ```
-python -m slideshow.cli "C:\Photos" "C:\Output\slideshow.mp4"
+uv run python -m slideshow.cli "C:\Photos" "C:\Output\slideshow.mp4"
 ```
 
 No photos folder handy? Just give it an output path and drop your pictures into the bundled `photos/` folder:
 
 ```
-python -m slideshow.cli "C:\Output\slideshow.mp4"
+uv run python -m slideshow.cli "C:\Output\slideshow.mp4"
 ```
 
 Want music behind it? Add a soundtrack:
 
 ```
-python -m slideshow.cli "C:\Photos" "C:\Output\slideshow.mp4" --soundtrack "C:\Music\song1.mp3"
+uv run python -m slideshow.cli "C:\Photos" "C:\Output\slideshow.mp4" --soundtrack "C:\Music\song1.mp3"
 ```
 
 Or drop audio files into `photos/_soundtracks/` and they'll be picked up automatically.
@@ -49,7 +47,7 @@ See the [technical docs](docs/TECHNICAL.md) for the full option list, the REST A
 If you'd rather integrate this into another app instead of using the command line, a REST API with interactive Swagger docs is included:
 
 ```
-uvicorn slideshow.api:app --reload
+uv run uvicorn slideshow.api:app --reload
 ```
 
 Then open http://127.0.0.1:8000/docs in your browser.

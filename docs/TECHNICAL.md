@@ -44,13 +44,13 @@ Photos/
 ## CLI usage
 
 ```
-python -m slideshow.cli "C:\Photos" "C:\Output\slideshow.mp4" --seconds-per-image 3 --soundtrack "C:\Music\song1.mp3" "C:\Music\song2.mp3"
+uv run python -m slideshow.cli "C:\Photos" "C:\Output\slideshow.mp4" --seconds-per-image 3 --soundtrack "C:\Music\song1.mp3" "C:\Music\song2.mp3"
 ```
 
 `input_folder` is optional — omit it and pass only the output path:
 
 ```
-python -m slideshow.cli "C:\Output\slideshow.mp4"
+uv run python -m slideshow.cli "C:\Output\slideshow.mp4"
 ```
 
 to use the bundled `photos/` folder at the project root as the default. If that folder is empty, the CLI creates it and tells you to add photos before rerunning. The same default applies to the REST API's `input_folder` field and to the upload endpoints when no `upload_id` is given.
@@ -74,7 +74,7 @@ The console first prints the calculated slideshow length (from photo count and `
 A FastAPI wrapper exposes the same functionality over HTTP, with interactive Swagger docs.
 
 ```
-uvicorn slideshow.api:app --reload
+uv run uvicorn slideshow.api:app --reload
 ```
 
 Then open http://127.0.0.1:8000/docs for the Swagger UI, or http://127.0.0.1:8000/redoc for ReDoc.
