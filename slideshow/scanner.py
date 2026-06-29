@@ -1,4 +1,4 @@
-"""Scan a root folder of year subfolders and return photos in chronological order."""
+"""Scan a folder tree for photos and return them in chronological order, regardless of folder layout."""
 from __future__ import annotations
 
 import datetime as dt
@@ -10,8 +10,9 @@ from PIL import Image, ExifTags
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp", ".heic"}
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg", ".wma"}
 
-# Default root folder for year subfolders (e.g. photos/2018, photos/2019, ...)
-# when the caller doesn't specify one. Created on demand if missing.
+# Default root folder to scan when the caller doesn't specify one. Created on
+# demand if missing. Subfolders (e.g. by year) are just for the user's own
+# organization - scan_photos walks the whole tree and ignores folder names.
 DEFAULT_PHOTOS_DIR = Path(__file__).resolve().parent.parent / "photos"
 
 # Default folder for soundtracks, used when no --soundtrack is given.
@@ -40,28 +41,27 @@ def _exif_datetime(path: Path) -> dt.datetime | None:
         return None
 
 
-def _photo_timestamp(path: Path, year_hint: int) -> dt.datetime:
+def _photo_timestamp(path: Path) -> dt.datetime:
     exif_dt = _exif_datetime(path)
     if exif_dt is not None:
         return exif_dt
-    mtime = dt.datetime.fromtimestamp(path.stat().st_mtime)
-    if mtime.year != year_hint:
-        mtime = mtime.replace(year=year_hint)
-    return mtime
+    return dt.datetime.fromtimestamp(path.stat().st_mtime)
 
 
 def scan_photos(root: Path) -> list[Photo]:
-    """Return all photos under root/<year>/ folders, sorted chronologically."""
-    photos: list[Photo] = []
-    for year_dir in sorted(p for p in root.iterdir() if p.is_dir() and not p.name.startswith("_")):
-        try:
-            year_hint = int(year_dir.name)
-        except ValueError:
-            year_hint = dt.datetime.now().year
+    """Return every photo found anywhere under `root`, sorted chronologically.
 
-        for path in sorted(year_dir.rglob("*")):
-            if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS:
-                photos.append(Photo(path=path, timestamp=_photo_timestamp(path, year_hint)))
+    Folder layout is irrelevant - photos are found by walking the whole
+    tree and ordered purely by EXIF capture date (falling back to file
+    modification time), not by which subfolder they happen to live in.
+    """
+    photos: list[Photo] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in IMAGE_EXTENSIONS:
+            continue
+        if any(part.startswith("_") for part in path.relative_to(root).parent.parts):
+            continue
+        photos.append(Photo(path=path, timestamp=_photo_timestamp(path)))
 
     photos.sort(key=lambda p: (p.timestamp, str(p.path)))
     return photos

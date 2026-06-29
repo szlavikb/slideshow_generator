@@ -1,11 +1,13 @@
 # photo-slideshow
 
-CLI that turns a folder of year-named photo subfolders (e.g. `2018/`, `2019/`, `2020/`)
-into a single chronological MP4 slideshow. Avoids PowerPoint's slowdown/crash issues
-with large photo counts by rendering straight to video.
+CLI that turns a folder of photos into a single chronological MP4 slideshow.
+Avoids PowerPoint's slowdown/crash issues with large photo counts by rendering
+straight to video.
 
-Photos are ordered using EXIF capture date when available, falling back to file
-modification time (corrected to the containing year folder).
+Folder layout doesn't matter — the whole tree is scanned recursively and every
+photo found is ordered by EXIF capture date (falling back to file modification
+time), regardless of which subfolder it's in. Organize photos into subfolders
+any way you like (by year, by event, or not at all).
 
 ## Setup
 
@@ -29,7 +31,7 @@ python -m slideshow.cli "C:\Photos" "C:\Output\slideshow.mp4" --seconds-per-imag
 python -m slideshow.cli "C:\Output\slideshow.mp4"
 ```
 
-to use the bundled `photos/` folder at the project root as the default. If that folder is empty, the CLI creates it and tells you to add year subfolders before rerunning. The same default applies to the REST API's `input_folder` field and to the upload endpoints when no `upload_id` is given.
+to use the bundled `photos/` folder at the project root as the default. If that folder is empty, the CLI creates it and tells you to add photos before rerunning. The same default applies to the REST API's `input_folder` field and to the upload endpoints when no `upload_id` is given.
 
 The console first prints the calculated slideshow length (from photo count and `--seconds-per-image`) so you know how long a soundtrack to pick.
 
@@ -57,24 +59,25 @@ Then open http://127.0.0.1:8000/docs for the Swagger UI, or http://127.0.0.1:800
 
 Rendering happens in a background thread per job, since a slideshow can take a while to encode:
 
-- `POST /uploads/photos` — multipart upload, one year at a time (`year` form field + `files`). Call it once per year, passing back the same `upload_id` to group them into one batch. Returns `input_folder` to use next.
+- `POST /uploads/photos` — multipart upload (`files`, plus an optional `batch_label` just to keep each call's files in their own subfolder). Photos are still ordered by capture date regardless of this label. Pass back the same `upload_id` across calls to group them into one batch. Returns `input_folder` to use next.
 - `POST /uploads/soundtracks` — multipart upload of one or more audio files for the same `upload_id`. Returns `soundtrack_paths` to use next.
 - `POST /slideshows` — body matches the CLI options (`input_folder`, `output_file`, `seconds_per_image`, `soundtrack`, etc.); returns `202` with a `job_id` immediately. `input_folder`/`soundtrack` can be either paths already on the server, or the values returned by the upload endpoints above.
 - `GET /slideshows/{job_id}` — poll for `status` (`pending` / `running` / `done` / `error`), `photo_count`, and `calculated_length_seconds`.
 - `GET /slideshows/{job_id}/download` — streams the finished `.mp4` once `status` is `done`.
 
-Uploaded files are written under `uploads/<upload_id>/<year>/...` next to the project (gitignored), or directly into `photos/`/`photos/_soundtracks/` when no `upload_id` is given. `output_file` in `POST /slideshows` is still a path on the server — point it somewhere writable, e.g. `uploads/<upload_id>/out.mp4`, then download it via the job's download endpoint.
+Uploaded files are written under `uploads/<upload_id>/<batch_label>/...` next to the project (gitignored), or directly into `photos/`/`photos/_soundtracks/` when no `upload_id` is given. `output_file` in `POST /slideshows` is still a path on the server — point it somewhere writable, e.g. `uploads/<upload_id>/out.mp4`, then download it via the job's download endpoint.
 
 ## Expected folder layout
 
+Anything works — photos can be in one flat folder or nested arbitrarily deep. Subfolder names are never used for ordering, only EXIF/modification dates are:
+
 ```
 Photos/
-  2018/
-    img1.jpg
+  img1.jpg
+  vacation-2019/
     img2.jpg
-  2019/
     img3.jpg
-  2020/
+  2018/
     sub-folder/
       img4.jpg
 ```

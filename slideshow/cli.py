@@ -18,14 +18,14 @@ def parse_resolution(value: str) -> tuple[int, int]:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Create a chronological MP4 slideshow from a folder of year-named photo subfolders.",
+        description="Create a chronological MP4 slideshow from a folder of photos (any layout - sorted by capture date, not folder structure).",
     )
     parser.add_argument(
         "input_folder",
         type=Path,
         nargs="?",
         default=DEFAULT_PHOTOS_DIR,
-        help=f"Root folder containing year subfolders (e.g. 2018, 2019, ...). Default: {DEFAULT_PHOTOS_DIR}",
+        help=f"Root folder to scan recursively for photos (any subfolder layout). Default: {DEFAULT_PHOTOS_DIR}",
     )
     parser.add_argument("output_file", type=Path, help="Output .mp4 path")
     parser.add_argument(
@@ -78,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.input_folder.is_dir():
         if args.input_folder == DEFAULT_PHOTOS_DIR:
             args.input_folder.mkdir(parents=True, exist_ok=True)
-            print(f"Created default photos folder at {args.input_folder}. Add year subfolders (2018, 2019, ...) with photos and rerun.")
+            print(f"Created default photos folder at {args.input_folder}. Add your photos (any subfolder layout) and rerun.")
             return 1
         print(f"Input folder not found: {args.input_folder}")
         return 1

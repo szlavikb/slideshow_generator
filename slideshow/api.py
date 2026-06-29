@@ -21,7 +21,7 @@ from .scanner import DEFAULT_PHOTOS_DIR, DEFAULT_SOUNDTRACKS_DIR, list_default_s
 
 app = FastAPI(
     title="Photo Slideshow API",
-    description="Generate chronological MP4 slideshows from year-organized photo folders.",
+    description="Generate chronological MP4 slideshows from a folder of photos, ordered by capture date regardless of folder layout.",
     version="0.1.0",
 )
 
@@ -63,21 +63,24 @@ def _save_uploads(dest_dir: Path, files: list[UploadFile]) -> list[str]:
 @app.post(
     "/uploads/photos",
     response_model=UploadResult,
-    summary="Upload photos for one year of the slideshow",
+    summary="Upload photos for the slideshow",
 )
 def upload_photos(
-    year: int = Form(..., description="The year subfolder these photos belong to, e.g. 2018"),
-    upload_id: Optional[str] = Form(
-        default=None,
+    batch_label: str = Form(
+        default="batch",
         description=(
-            "Reuse an existing upload_id to add another year to the same batch. "
-            "Leave empty to upload into the shared default photos folder."
+            "Just a subfolder name to keep this upload call's files together (e.g. 'phone-backup'). "
+            "Purely organizational - photos are sorted by capture date regardless of folder, not by this label."
         ),
     ),
-    files: list[UploadFile] = File(..., description="Photo files for this year"),
+    upload_id: Optional[str] = Form(
+        default=None,
+        description="Reuse an existing upload_id to add more photos to the same batch. Leave empty to upload into the shared default photos folder.",
+    ),
+    files: list[UploadFile] = File(..., description="Photo files"),
 ) -> UploadResult:
     resolved_id, base_dir = _upload_base_dir(upload_id)
-    saved = _save_uploads(base_dir / str(year), files)
+    saved = _save_uploads(base_dir / batch_label, files)
     return UploadResult(upload_id=resolved_id, saved_files=saved, input_folder=str(base_dir))
 
 
@@ -112,7 +115,7 @@ class SlideshowRequest(BaseModel):
     input_folder: Optional[str] = Field(
         default=None,
         description=(
-            "Root folder containing year subfolders (e.g. 2018, 2019, ...). "
+            "Root folder to scan recursively for photos (any subfolder layout - sorted by capture date, not folder structure). "
             f"Defaults to the shared photos folder ({DEFAULT_PHOTOS_DIR}) if omitted."
         ),
     )
