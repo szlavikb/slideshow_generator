@@ -49,11 +49,13 @@ Then open http://127.0.0.1:8000/docs for the Swagger UI, or http://127.0.0.1:800
 
 Rendering happens in a background thread per job, since a slideshow can take a while to encode:
 
-- `POST /slideshows` — body matches the CLI options (`input_folder`, `output_file`, `seconds_per_image`, `soundtrack`, etc.); returns `202` with a `job_id` immediately.
+- `POST /uploads/photos` — multipart upload, one year at a time (`year` form field + `files`). Call it once per year, passing back the same `upload_id` to group them into one batch. Returns `input_folder` to use next.
+- `POST /uploads/soundtracks` — multipart upload of one or more audio files for the same `upload_id`. Returns `soundtrack_paths` to use next.
+- `POST /slideshows` — body matches the CLI options (`input_folder`, `output_file`, `seconds_per_image`, `soundtrack`, etc.); returns `202` with a `job_id` immediately. `input_folder`/`soundtrack` can be either paths already on the server, or the values returned by the upload endpoints above.
 - `GET /slideshows/{job_id}` — poll for `status` (`pending` / `running` / `done` / `error`), `photo_count`, and `calculated_length_seconds`.
 - `GET /slideshows/{job_id}/download` — streams the finished `.mp4` once `status` is `done`.
 
-All paths (`input_folder`, `output_file`, `soundtrack`) refer to locations on the machine running the API, not uploaded files.
+Uploaded files are written under `uploads/<upload_id>/<year>/...` next to the project (gitignored). `output_file` in `POST /slideshows` is still a path on the server — point it somewhere writable, e.g. `uploads/<upload_id>/out.mp4`, then download it via the job's download endpoint.
 
 ## Expected folder layout
 

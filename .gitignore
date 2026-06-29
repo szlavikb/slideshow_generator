@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 *.mp4
+/uploads/
 *.egg-info/
 build/
 dist/

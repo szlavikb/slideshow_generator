@@ -5,13 +5,14 @@ Swagger UI is then available at http://127.0.0.1:8000/docs
 """
 from __future__ import annotations
 
+import shutil
 import threading
 import uuid
 from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -23,6 +24,64 @@ app = FastAPI(
     description="Generate chronological MP4 slideshows from year-organized photo folders.",
     version="0.1.0",
 )
+
+UPLOAD_ROOT = Path(__file__).resolve().parent.parent / "uploads"
+_SOUNDTRACK_DIRNAME = "_soundtracks"
+
+
+class UploadResult(BaseModel):
+    upload_id: str
+    saved_files: list[str]
+    input_folder: Optional[str] = Field(
+        default=None, description="Pass this as `input_folder` in POST /slideshows"
+    )
+    soundtrack_paths: Optional[list[str]] = Field(
+        default=None, description="Pass these as `soundtrack` in POST /slideshows"
+    )
+
+
+def _save_uploads(dest_dir: Path, files: list[UploadFile]) -> list[str]:
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    saved = []
+    for upload in files:
+        dest = dest_dir / Path(upload.filename).name
+        with dest.open("wb") as out:
+            shutil.copyfileobj(upload.file, out)
+        saved.append(str(dest))
+    return saved
+
+
+@app.post(
+    "/uploads/photos",
+    response_model=UploadResult,
+    summary="Upload photos for one year of the slideshow",
+)
+def upload_photos(
+    year: int = Form(..., description="The year subfolder these photos belong to, e.g. 2018"),
+    upload_id: Optional[str] = Form(
+        default=None, description="Reuse an existing upload_id to add another year to the same batch"
+    ),
+    files: list[UploadFile] = File(..., description="Photo files for this year"),
+) -> UploadResult:
+    upload_id = upload_id or uuid.uuid4().hex
+    saved = _save_uploads(UPLOAD_ROOT / upload_id / str(year), files)
+    return UploadResult(upload_id=upload_id, saved_files=saved, input_folder=str(UPLOAD_ROOT / upload_id))
+
+
+@app.post(
+    "/uploads/soundtracks",
+    response_model=UploadResult,
+    summary="Upload one or more soundtrack audio files",
+)
+def upload_soundtracks(
+    upload_id: Optional[str] = Form(
+        default=None, description="Reuse an existing upload_id to keep the soundtrack alongside its photos"
+    ),
+    files: list[UploadFile] = File(..., description="Audio files, in the order they should play"),
+) -> UploadResult:
+    upload_id = upload_id or uuid.uuid4().hex
+    saved = _save_uploads(UPLOAD_ROOT / upload_id / _SOUNDTRACK_DIRNAME, files)
+    return UploadResult(upload_id=upload_id, saved_files=saved, soundtrack_paths=saved)
 
 
 class JobStatus(str, Enum):
