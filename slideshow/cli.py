@@ -56,6 +56,10 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Found {len(photos)} photos spanning {photos[0].timestamp.date()} to {photos[-1].timestamp.date()}.")
 
+    total_seconds = len(photos) * args.seconds_per_image - max(len(photos) - 1, 0) * args.transition_seconds
+    minutes, seconds = divmod(round(total_seconds), 60)
+    print(f"Calculated slideshow length: {minutes}m {seconds}s. Pick a soundtrack close to this length for the best fit.")
+
     build_slideshow(
         photos=photos,
         output_path=args.output_file,
