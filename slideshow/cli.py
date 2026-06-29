@@ -47,6 +47,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=1.0,
         help="Fade duration applied at every track join and at any cut point, to avoid clicks (default: 1.0)",
     )
+    parser.add_argument(
+        "--animation",
+        choices=["ken-burns", "static"],
+        default="ken-burns",
+        help="Per-photo motion: 'ken-burns' slowly zooms/pans each photo (default), 'static' shows it motionless",
+    )
+    parser.add_argument(
+        "--zoom",
+        type=float,
+        default=1.15,
+        help="How far the Ken Burns effect zooms in, as a multiplier (default: 1.15 = 15%% zoom)",
+    )
     parser.add_argument("--fps", type=int, default=24, help="Output video frame rate (default: 24)")
     return parser
 
@@ -83,6 +95,8 @@ def main(argv: list[str] | None = None) -> int:
         soundtrack_paths=args.soundtrack,
         soundtrack_volume=args.soundtrack_volume,
         audio_fade_seconds=args.audio_fade_seconds,
+        animation=args.animation,
+        zoom=args.zoom,
         fps=args.fps,
     )
 

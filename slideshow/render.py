@@ -1,10 +1,12 @@
 """Render a chronological list of photos into an MP4 slideshow."""
 from __future__ import annotations
 
+import random
 from pathlib import Path
 
 from moviepy.editor import (
     AudioFileClip,
+    CompositeVideoClip,
     ImageClip,
     afx,
     concatenate_audioclips,
@@ -15,12 +17,56 @@ from .scanner import Photo
 
 DEFAULT_RESOLUTION = (1920, 1080)
 
+# Diagonal pan directions, expressed as the (x, y) offset of the top-left
+# corner of an oversized image relative to the canvas, at t=0 and t=duration.
+# Panning reveals a different part of the image each time so consecutive
+# photos don't all move the same way.
+_PAN_DIRECTIONS = [
+    ((0, 0), "br"),
+    ((1, 1), "tl"),
+    ((1, 0), "bl"),
+    ((0, 1), "tr"),
+]
+
+
+def _cover_resize(clip: ImageClip, resolution: tuple[int, int], zoom: float = 1.0) -> ImageClip:
+    """Resize so the image fully covers `resolution` (cropping overflow), then
+    enlarge by `zoom` to leave margin for panning."""
+    target_w, target_h = resolution[0] * zoom, resolution[1] * zoom
+    return clip.resize(height=target_h) if clip.w / clip.h > target_w / target_h else clip.resize(width=target_w)
+
 
 def _fit_clip(clip: ImageClip, resolution: tuple[int, int]) -> ImageClip:
     """Letterbox the image to fill `resolution` without cropping or distortion."""
     target_w, target_h = resolution
     clip = clip.resize(height=target_h) if clip.w / clip.h > target_w / target_h else clip.resize(width=target_w)
     return clip.on_color(size=resolution, color=(0, 0, 0), pos="center")
+
+
+def _ken_burns_clip(
+    photo: Photo,
+    duration: float,
+    resolution: tuple[int, int],
+    zoom: float = 1.15,
+    rng: random.Random | None = None,
+) -> ImageClip:
+    """Build a slowly panning/zooming clip (the classic "Ken Burns" effect)
+    instead of a static, motionless photo."""
+    rng = rng or random
+    covered = _cover_resize(ImageClip(str(photo.path)).set_duration(duration), resolution, zoom)
+
+    margin_x = max(covered.w - resolution[0], 0)
+    margin_y = max(covered.h - resolution[1], 0)
+    (start_frac, _label) = rng.choice(_PAN_DIRECTIONS)
+    start_x, start_y = -margin_x * start_frac[0], -margin_y * start_frac[1]
+    end_x, end_y = -margin_x * (1 - start_frac[0]), -margin_y * (1 - start_frac[1])
+
+    def position(t: float) -> tuple[float, float]:
+        progress = min(t / duration, 1.0) if duration > 0 else 1.0
+        return (start_x + (end_x - start_x) * progress, start_y + (end_y - start_y) * progress)
+
+    covered = covered.set_position(position)
+    return CompositeVideoClip([covered], size=resolution).set_duration(duration)
 
 
 def _build_audio_track(
@@ -65,15 +111,20 @@ def build_slideshow(
     soundtrack_paths: list[Path] | None = None,
     soundtrack_volume: float = 1.0,
     audio_fade_seconds: float = 1.0,
+    animation: str = "ken-burns",
+    zoom: float = 1.15,
     fps: int = 24,
 ) -> None:
     if not photos:
         raise ValueError("No photos to render.")
 
+    rng = random.Random(0)
     clips = []
     for photo in photos:
-        clip = ImageClip(str(photo.path)).set_duration(seconds_per_image)
-        clip = _fit_clip(clip, resolution)
+        if animation == "ken-burns":
+            clip = _ken_burns_clip(photo, seconds_per_image, resolution, zoom, rng)
+        else:
+            clip = _fit_clip(ImageClip(str(photo.path)).set_duration(seconds_per_image), resolution)
         if transition_seconds > 0:
             clip = clip.crossfadein(transition_seconds)
         clips.append(clip)

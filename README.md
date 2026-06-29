@@ -33,6 +33,8 @@ The console first prints the calculated slideshow length (from photo count and `
 - `--soundtrack` — one or more audio files, played in order, looped or trimmed to match the video length exactly
 - `--soundtrack-volume` — volume multiplier for the soundtrack (default 1.0)
 - `--audio-fade-seconds` — fade applied at every track join and at any cut point, so looping/trimming/concatenating never clicks or jumps abruptly (default 1.0)
+- `--animation` — `ken-burns` (default) slowly zooms/pans each photo instead of showing it motionless; `static` disables this
+- `--zoom` — how far the Ken Burns effect zooms in, as a multiplier (default 1.15)
 - `--fps` — output frame rate (default 24)
 
 ## Expected folder layout
