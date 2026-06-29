@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 
 from .render import DEFAULT_RESOLUTION, build_slideshow
-from .scanner import DEFAULT_PHOTOS_DIR, scan_photos
+from .scanner import DEFAULT_PHOTOS_DIR, DEFAULT_SOUNDTRACKS_DIR, list_default_soundtracks, scan_photos
 
 
 def parse_resolution(value: str) -> tuple[int, int]:
@@ -42,7 +42,10 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         nargs="+",
         default=None,
-        help="One or more audio files to play under the slideshow, in order, looped/trimmed to fit",
+        help=(
+            "One or more audio files to play under the slideshow, in order, looped/trimmed to fit. "
+            f"Defaults to any audio files found in {DEFAULT_SOUNDTRACKS_DIR} if omitted."
+        ),
     )
     parser.add_argument(
         "--soundtrack-volume", type=float, default=1.0, help="Soundtrack volume multiplier (default: 1.0)"
@@ -84,6 +87,11 @@ def main(argv: list[str] | None = None) -> int:
         if missing:
             print(f"Soundtrack file(s) not found: {', '.join(missing)}")
             return 1
+    else:
+        defaults = list_default_soundtracks()
+        if defaults:
+            args.soundtrack = defaults
+            print(f"Using default soundtrack(s) from {DEFAULT_SOUNDTRACKS_DIR}: {', '.join(p.name for p in defaults)}")
 
     photos = scan_photos(args.input_folder)
     if not photos:

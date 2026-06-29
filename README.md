@@ -38,7 +38,7 @@ The console first prints the calculated slideshow length (from photo count and `
 - `--seconds-per-image` — how long each photo is shown (default 3.0)
 - `--transition-seconds` — crossfade duration between photos (default 0.5)
 - `--resolution` — output resolution, e.g. `1920x1080` (default)
-- `--soundtrack` — one or more audio files, played in order, looped or trimmed to match the video length exactly
+- `--soundtrack` — one or more audio files, played in order, looped or trimmed to match the video length exactly. If omitted, any audio files found in `photos/_soundtracks/` are used automatically (sorted by filename)
 - `--soundtrack-volume` — volume multiplier for the soundtrack (default 1.0)
 - `--audio-fade-seconds` — fade applied at every track join and at any cut point, so looping/trimming/concatenating never clicks or jumps abruptly (default 1.0)
 - `--animation` — `ken-burns` (default) slowly zooms/pans each photo instead of showing it motionless; `static` disables this
@@ -63,7 +63,7 @@ Rendering happens in a background thread per job, since a slideshow can take a w
 - `GET /slideshows/{job_id}` — poll for `status` (`pending` / `running` / `done` / `error`), `photo_count`, and `calculated_length_seconds`.
 - `GET /slideshows/{job_id}/download` — streams the finished `.mp4` once `status` is `done`.
 
-Uploaded files are written under `uploads/<upload_id>/<year>/...` next to the project (gitignored). `output_file` in `POST /slideshows` is still a path on the server — point it somewhere writable, e.g. `uploads/<upload_id>/out.mp4`, then download it via the job's download endpoint.
+Uploaded files are written under `uploads/<upload_id>/<year>/...` next to the project (gitignored), or directly into `photos/`/`photos/_soundtracks/` when no `upload_id` is given. `output_file` in `POST /slideshows` is still a path on the server — point it somewhere writable, e.g. `uploads/<upload_id>/out.mp4`, then download it via the job's download endpoint.
 
 ## Expected folder layout
 

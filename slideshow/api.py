@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from .render import DEFAULT_RESOLUTION, build_slideshow
-from .scanner import DEFAULT_PHOTOS_DIR, scan_photos
+from .scanner import DEFAULT_PHOTOS_DIR, DEFAULT_SOUNDTRACKS_DIR, list_default_soundtracks, scan_photos
 
 app = FastAPI(
     title="Photo Slideshow API",
@@ -26,7 +26,7 @@ app = FastAPI(
 )
 
 UPLOAD_ROOT = Path(__file__).resolve().parent.parent / "uploads"
-_SOUNDTRACK_DIRNAME = "_soundtracks"
+_SOUNDTRACK_DIRNAME = DEFAULT_SOUNDTRACKS_DIR.name
 
 
 def _upload_base_dir(upload_id: Optional[str]) -> tuple[str, Path]:
@@ -122,7 +122,11 @@ class SlideshowRequest(BaseModel):
     resolution_width: int = Field(default=DEFAULT_RESOLUTION[0])
     resolution_height: int = Field(default=DEFAULT_RESOLUTION[1])
     soundtrack: Optional[list[str]] = Field(
-        default=None, description="One or more audio file paths, played in order, looped/trimmed to fit"
+        default=None,
+        description=(
+            "One or more audio file paths, played in order, looped/trimmed to fit. "
+            f"Defaults to any audio files found in {DEFAULT_SOUNDTRACKS_DIR} if omitted."
+        ),
     )
     soundtrack_volume: float = Field(default=1.0)
     audio_fade_seconds: float = Field(
@@ -196,6 +200,10 @@ def create_slideshow(req: SlideshowRequest) -> JobInfo:
         missing = [p for p in req.soundtrack if not Path(p).is_file()]
         if missing:
             raise HTTPException(status_code=400, detail=f"Soundtrack file(s) not found: {', '.join(missing)}")
+    else:
+        defaults = list_default_soundtracks()
+        if defaults:
+            req.soundtrack = [str(p) for p in defaults]
 
     job_id = uuid.uuid4().hex
     job = JobInfo(job_id=job_id, status=JobStatus.PENDING)

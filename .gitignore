@@ -5,6 +5,9 @@ __pycache__/
 /uploads/
 /photos/*
 !/photos/.gitkeep
+!/photos/_soundtracks/
+/photos/_soundtracks/*
+!/photos/_soundtracks/.gitkeep
 *.egg-info/
 build/
 dist/
